@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { environment } from '../environments/environment';
 
 declare global {
   interface Window {
@@ -22,11 +23,11 @@ declare global {
   styleUrl: './app.scss',
 })
 export class App {
-  appId = '864793622627809';
-  configId = '1209692291296285';
-  redirectUri = 'http://localhost:4200/callback.html';
-  clientId = 'mapfre';
-  apiUrl = 'https://sggy86nf5k.execute-api.eu-west-1.amazonaws.com';
+  appId = environment.metaAppId;
+  configId = environment.configId;
+  redirectUri = environment.redirectUri;
+  clientId = environment.clientId;
+  apiUrl = environment.apiUrl;
   codeInput = '';
 
   sdkReady = false;
