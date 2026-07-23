@@ -56,7 +56,9 @@ export class MetaTechProviderFrontendStack extends cdk.Stack {
       distribution,
       distributionPaths: ["/*"],
       sources: [
-        s3deploy.Source.asset("frontend/app/dist/meta-tech-provider-front"),
+        s3deploy.Source.asset(
+          "frontend/app/dist/meta-tech-provider-front/browser",
+        ),
       ],
     });
 
