@@ -1,0 +1,51 @@
+<section class="panel">
+  <div class="panel-header">
+    <h2>Webhook Events</h2>
+    <button
+      type="button"
+      (click)="service.togglePause()"
+      [attr.aria-label]="service.paused() ? 'Resume auto-refresh' : 'Pause auto-refresh'"
+    >
+      {{ service.paused() ? 'Resume' : 'Pause' }}
+    </button>
+  </div>
+
+  @if (service.state() === 'loading' && service.events().length === 0) {
+    <p class="info" aria-live="polite" aria-busy="true">Loading events...</p>
+  }
+
+  @if (service.state() === 'error' && errorMessage(); as msg) {
+    <p class="error" aria-live="assertive">{{ msg }}</p>
+  }
+
+  @if (service.isEmpty()) {
+    <p class="info" role="status">No events recorded yet.</p>
+  }
+
+  @if (service.events().length > 0) {
+    <table aria-label="Received webhook events list">
+      <thead>
+        <tr>
+          <th scope="col">Timestamp</th>
+          <th scope="col">Type</th>
+          <th scope="col">WABA</th>
+          <th scope="col">From</th>
+          <th scope="col">Content</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (evt of service.events(); track evt.eventId) {
+          <tr>
+            <td>{{ evt.timestamp | date: 'MM/dd/yyyy HH:mm:ss' }}</td>
+            <td>
+              <span [class]="eventSeverity(evt.type)">{{ eventLabel(evt.type) }}</span>
+            </td>
+            <td>{{ evt.wabaId }}</td>
+            <td>{{ evt.from }}</td>
+            <td>{{ evt.content ?? '—' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

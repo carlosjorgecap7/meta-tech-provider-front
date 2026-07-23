@@ -1,0 +1,56 @@
+.panel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+button {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.info {
+  color: #475569;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.status-info {
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.status-success {
+  color: #166534;
+  font-weight: 600;
+}
+
+.status-error {
+  color: #b91c1c;
+  font-weight: 600;
+}

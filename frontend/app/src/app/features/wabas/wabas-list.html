@@ -1,0 +1,50 @@
+<section class="panel">
+  <div class="panel-header">
+    <h2>WhatsApp Business Accounts</h2>
+    <button
+      type="button"
+      [disabled]="service.state() === 'loading'"
+      (click)="refresh()"
+      aria-label="Refresh account list"
+    >
+      Refresh
+    </button>
+  </div>
+
+  @if (service.state() === 'loading') {
+    <p class="info" aria-live="polite">Loading accounts...</p>
+  }
+
+  @if (service.state() === 'error' && errorMessage(); as msg) {
+    <p class="error" aria-live="assertive">{{ msg }}</p>
+  }
+
+  @if (service.isEmpty()) {
+    <p class="info" role="status">No accounts connected yet.</p>
+  }
+
+  @if (service.state() === 'loaded' && !service.isEmpty()) {
+    <table aria-label="Connected WABAs list">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Phone</th>
+          <th scope="col">Status</th>
+          <th scope="col">Connected on</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (waba of service.wabas(); track waba.wabaId) {
+          <tr>
+            <td>{{ waba.displayName }}</td>
+            <td>{{ waba.phoneNumber }}</td>
+            <td>
+              <span [class]="statusSeverity(waba.status)">{{ statusLabel(waba.status) }}</span>
+            </td>
+            <td>{{ waba.connectedAt | date: 'MM/dd/yyyy HH:mm' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>
