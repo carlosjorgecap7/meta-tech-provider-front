@@ -1,190 +1,159 @@
-import { Component } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  inject,
+  signal,
+  computed,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { environment } from '../../../environments/environment';
+import { ButtonModule } from 'primeng/button';
+import { CardModule } from 'primeng/card';
+import { MessageModule } from 'primeng/message';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
-declare global {
-  interface Window {
-    FB?: {
-      init: (config: { appId: string; cookie: boolean; xfbml: boolean; version: string }) => void;
-      login: (
-        callback: (response: { authResponse?: { code?: string } | null; status?: string }) => void,
-        params: Record<string, unknown>,
-      ) => void;
-    };
-    fbAsyncInit?: () => void;
-  }
-}
+import { FacebookSdkService } from '../../core/meta/facebook-sdk.service';
+import { WhatsappOnboardingService } from './whatsapp-onboarding.service';
+import { TenantContextService } from '../../core/tenant/tenant-context.service';
+import { LoggerService } from '../../core/logger/logger.service';
+import {
+  isEmbeddedSignupMessage,
+  isFinishMessage,
+} from '../../core/meta/embedded-signup.types';
+import {
+  toAppError,
+  userFacingMessage,
+  type AppError,
+} from '../../core/errors/app-error';
+import type { SdkLoginError, UserCancelledError } from '../../core/errors/app-error';
+import type { ExchangeResponseDto } from './whatsapp-onboarding.types';
+
+type ComponentState = 'idle' | 'sdk-loading' | 'connecting' | 'success' | 'error';
 
 @Component({
   selector: 'app-whatsapp-connect',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, ButtonModule, CardModule, MessageModule, ProgressSpinnerModule],
   templateUrl: './whatsapp-connect.html',
   styleUrl: './whatsapp-connect.css',
 })
-export class WhatsappConnect {
-  appId = environment.meta.appId;
-  configId = environment.meta.configId;
-  redirectUri = environment.redirectUri;
-  clientId = environment.tenant.defaultTenantId;
-  apiUrl = environment.api.baseUrl;
-  codeInput = '';
+export class WhatsappConnect implements OnInit, OnDestroy {
+  private readonly sdk = inject(FacebookSdkService);
+  private readonly onboarding = inject(WhatsappOnboardingService);
+  private readonly tenant = inject(TenantContextService);
+  private readonly logger = inject(LoggerService);
 
-  sdkReady = false;
-  logs: Array<{ text: string; type: 'info' | 'ok' | 'warn' }> = [];
+  readonly state = signal<ComponentState>('idle');
+  readonly error = signal<AppError | null>(null);
+  readonly result = signal<ExchangeResponseDto | null>(null);
 
-  constructor() {
-    this.loadSaved();
-    this.log('Listo. Rellena campos y ejecuta paso 1 -> 2 -> 3.', 'info');
+  readonly isLoading = computed(
+    () => this.state() === 'sdk-loading' || this.state() === 'connecting',
+  );
+  readonly loadingLabel = computed(() =>
+    this.state() === 'sdk-loading'
+      ? 'Loading Meta SDK…'
+      : 'Connecting to WhatsApp Business…',
+  );
+  readonly errorMessage = computed(() => {
+    const err = this.error();
+    return err ? userFacingMessage(err) : null;
+  });
 
-    window.addEventListener('message', (event: MessageEvent) => {
-      if (!event.data) {
-        return;
-      }
-      const data = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
-      this.log(`message event: ${data}`, 'info');
-    });
+  private messageListener: ((event: MessageEvent) => void) | null = null;
+
+  ngOnInit(): void {
+    this.registerMessageListener();
+
+    if (this.sdk.state() === 'idle') {
+      this.state.set('sdk-loading');
+      this.sdk.load();
+    }
   }
 
-  initSdk(): void {
-    this.saveCurrent();
-
-    if (!this.appId.trim()) {
-      this.log('Falta META_APP_ID', 'warn');
-      return;
-    }
-
-    if (window.FB) {
-      window.FB.init({
-        appId: this.appId.trim(),
-        cookie: true,
-        xfbml: false,
-        version: 'v19.0',
-      });
-      this.sdkReady = true;
-      this.log('SDK inicializado.', 'ok');
-      return;
-    }
-
-    window.fbAsyncInit = () => {
-      window.FB?.init({
-        appId: this.appId.trim(),
-        cookie: true,
-        xfbml: false,
-        version: 'v19.0',
-      });
-      this.sdkReady = true;
-      this.log('SDK inicializado.', 'ok');
-    };
-
-    const script = document.createElement('script');
-    script.src = 'https://connect.facebook.net/en_US/sdk.js';
-    script.async = true;
-    script.defer = true;
-    script.crossOrigin = 'anonymous';
-    document.body.appendChild(script);
+  ngOnDestroy(): void {
+    this.cleanupMessageListener();
   }
 
-  launchSignup(): void {
-    this.saveCurrent();
+  async startSignup(): Promise<void> {
+    if (this.isLoading()) return;
 
-    if (!this.appId.trim() || !this.configId.trim() || !this.redirectUri.trim()) {
-      this.log('Faltan META_APP_ID, Config ID o Redirect URI.', 'warn');
+    this.error.set(null);
+    this.result.set(null);
+
+    if (this.sdk.state() !== 'ready') {
+      this.state.set('sdk-loading');
+      this.sdk.load();
       return;
     }
 
-    if (!this.sdkReady || !window.FB) {
-      this.log('Inicializa SDK primero.', 'warn');
-      return;
-    }
-
-    this.log('Lanzando Embedded Signup...', 'ok');
-
-    window.FB.login(
-      (response) => {
-        const code = response?.authResponse?.code;
-        if (code) {
-          this.codeInput = code;
-          this.log('Code capturado desde authResponse.code', 'ok');
-          return;
-        }
-
-        this.log(`Respuesta FB.login sin code: ${JSON.stringify(response)}`, 'info');
-        this.log('Si no aparece code, revisa callback.html y URL final.', 'warn');
-      },
-      {
-        config_id: this.configId.trim(),
-        response_type: 'code',
-        override_default_response_type: true,
-        extras: {
-          feature: 'whatsapp_embedded_signup',
-          sessionInfoVersion: 3,
-        },
-        auth_type: 'rerequest',
-        redirect_uri: this.redirectUri.trim(),
-      },
-    );
-  }
-
-  async exchangeCode(): Promise<void> {
-    const code = this.codeInput.trim();
-    const clientId = this.clientId.trim() || 'mapfre';
-    const apiUrl = this.apiUrl.trim();
-
-    if (!code) {
-      this.log('Falta code para exchange.', 'warn');
-      return;
-    }
-
-    if (!apiUrl) {
-      this.log('Falta API URL.', 'warn');
-      return;
-    }
-
-    const url = `${apiUrl}/onboarding/exchange`;
-    this.log(`POST ${url}`, 'info');
+    this.state.set('connecting');
 
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, client_id: clientId }),
-      });
+      const response = await this.sdk.login();
 
-      const text = await res.text();
-      this.log(`HTTP ${res.status} -> ${text}`, res.ok ? 'ok' : 'warn');
-    } catch (err) {
-      this.log(`Error llamando backend: ${String(err)}`, 'warn');
-    }
-  }
-
-  private loadSaved(): void {
-    const mapping: Array<[keyof WhatsappConnect, string]> = [
-      ['appId', 'es_appId'],
-      ['configId', 'es_configId'],
-      ['redirectUri', 'es_redirectUri'],
-      ['clientId', 'es_clientId'],
-      ['apiUrl', 'es_apiUrl'],
-    ];
-
-    for (const [field, storageKey] of mapping) {
-      const value = localStorage.getItem(storageKey);
-      if (value) {
-        this[field] = value as never;
+      if (response.status !== 'connected' || !response.authResponse?.code) {
+        const loginError: SdkLoginError = {
+          type: 'SdkLoginError',
+          status: response.status,
+          message: 'No authorization code received from Meta.',
+        };
+        this.state.set('error');
+        this.error.set(loginError);
+        return;
       }
+
+      this.logger.info('FB.login exitoso, esperando postMessage de Embedded Signup');
+    } catch (err) {
+      this.state.set('error');
+      this.error.set(toAppError(err));
     }
   }
 
-  private saveCurrent(): void {
-    localStorage.setItem('es_appId', this.appId.trim());
-    localStorage.setItem('es_configId', this.configId.trim());
-    localStorage.setItem('es_redirectUri', this.redirectUri.trim());
-    localStorage.setItem('es_clientId', this.clientId.trim());
-    localStorage.setItem('es_apiUrl', this.apiUrl.trim());
+  private registerMessageListener(): void {
+    this.messageListener = (event: MessageEvent): void => {
+      if (!event.origin.endsWith('.facebook.com') && event.origin !== 'https://www.facebook.com') {
+        return;
+      }
+
+      if (!isEmbeddedSignupMessage(event.data)) return;
+
+      if (isFinishMessage(event.data)) {
+        const { waba_id: wabaId, phone_number_id: phoneNumberId } = event.data.data;
+        this.logger.info('Embedded Signup FINISH', { wabaId, phoneNumberId });
+        this.handleSignupFinish(wabaId, phoneNumberId);
+      } else {
+        const cancelledError: UserCancelledError = { type: 'UserCancelledError' };
+        this.logger.info('Embedded Signup CANCEL', { step: event.data.data.current_step });
+        this.state.set('error');
+        this.error.set(cancelledError);
+      }
+    };
+
+    window.addEventListener('message', this.messageListener);
   }
 
-  private log(message: string, type: 'info' | 'ok' | 'warn'): void {
-    const timestamp = new Date().toLocaleTimeString();
-    this.logs.push({ text: `[${timestamp}] ${message}`, type });
+  private cleanupMessageListener(): void {
+    if (this.messageListener) {
+      window.removeEventListener('message', this.messageListener);
+      this.messageListener = null;
+    }
+  }
+
+  private handleSignupFinish(wabaId: string, phoneNumberId: string): void {
+    const tenantId = this.tenant.tenantId();
+
+    this.onboarding
+      .exchange({ code: 'pending-from-fb-login', wabaId, phoneNumberId, tenantId })
+      .subscribe({
+        next: (res) => {
+          this.result.set(res);
+          this.state.set('success');
+          this.logger.info('Onboarding exchange completado', { wabaId, status: res.status });
+        },
+        error: (err: unknown) => {
+          this.state.set('error');
+          this.error.set(toAppError(err));
+        },
+      });
   }
 }

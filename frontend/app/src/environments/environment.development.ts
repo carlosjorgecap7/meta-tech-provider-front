@@ -1,18 +1,20 @@
 export const environment = {
   production: false,
   useMockBackend: true,
+
   api: {
-    baseUrl: 'https://sggy86nf5k.execute-api.eu-west-1.amazonaws.com',
+    baseUrl: 'http://localhost:4200',
   },
+
   meta: {
-    appId: '',
-    sdkVersion: 'v19.0',
-    configId: '',
+    appId: 'YOUR_META_APP_ID_DEV',
+    sdkVersion: 'v21.0',
+    configId: 'YOUR_EMBEDDED_SIGNUP_CONFIG_ID_DEV',
   },
+
   tenant: {
     defaultTenantId: 'mapfre',
   },
-  redirectUri: '',
 };
 
 export type Environment = typeof environment;

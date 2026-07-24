@@ -1,30 +1,46 @@
-<section class="panel">
-  <div class="panel-header">
-    <h2>Webhook Events</h2>
-    <button
-      type="button"
-      (click)="service.togglePause()"
-      [attr.aria-label]="service.paused() ? 'Resume auto-refresh' : 'Pause auto-refresh'"
-    >
-      {{ service.paused() ? 'Resume' : 'Pause' }}
-    </button>
-  </div>
+<p-card>
+  <ng-template #header>
+    <div class="flex items-center justify-between px-6 pt-5">
+      <h2 class="text-xl font-semibold">Webhook Events</h2>
+      <div class="flex gap-2">
+        <p-button
+          [icon]="service.paused() ? 'pi pi-play' : 'pi pi-pause'"
+          [label]="service.paused() ? 'Resume' : 'Pause'"
+          severity="secondary"
+          size="small"
+          (onClick)="service.togglePause()"
+          [attr.aria-label]="service.paused() ? 'Resume auto-refresh' : 'Pause auto-refresh'"
+        />
+      </div>
+    </div>
+  </ng-template>
 
   @if (service.state() === 'loading' && service.events().length === 0) {
-    <p class="info" aria-live="polite" aria-busy="true">Loading events...</p>
+    <div class="flex justify-center py-10" aria-live="polite" aria-busy="true">
+      <p-progressSpinner strokeWidth="4" aria-label="Loading events" />
+    </div>
   }
 
   @if (service.state() === 'error' && errorMessage(); as msg) {
-    <p class="error" aria-live="assertive">{{ msg }}</p>
+    <p-message severity="error" [text]="msg" aria-live="assertive" />
   }
 
   @if (service.isEmpty()) {
-    <p class="info" role="status">No events recorded yet.</p>
+    <div class="flex flex-col items-center py-12 text-surface-500" role="status">
+      <i class="pi pi-inbox text-5xl mb-3" aria-hidden="true"></i>
+      <p>No events recorded yet.</p>
+    </div>
   }
 
   @if (service.events().length > 0) {
-    <table aria-label="Received webhook events list">
-      <thead>
+    <p-table
+      [value]="service.events()"
+      [paginator]="true"
+      [rows]="20"
+      styleClass="p-datatable-sm"
+      aria-label="Received webhook events list"
+    >
+      <ng-template #header>
         <tr>
           <th scope="col">Timestamp</th>
           <th scope="col">Type</th>
@@ -32,20 +48,18 @@
           <th scope="col">From</th>
           <th scope="col">Content</th>
         </tr>
-      </thead>
-      <tbody>
-        @for (evt of service.events(); track evt.eventId) {
-          <tr>
-            <td>{{ evt.timestamp | date: 'MM/dd/yyyy HH:mm:ss' }}</td>
-            <td>
-              <span [class]="eventSeverity(evt.type)">{{ eventLabel(evt.type) }}</span>
-            </td>
-            <td>{{ evt.wabaId }}</td>
-            <td>{{ evt.from }}</td>
-            <td>{{ evt.content ?? '—' }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+      </ng-template>
+      <ng-template #body let-evt>
+        <tr>
+          <td>{{ evt.timestamp | date: 'MM/dd/yyyy HH:mm:ss' }}</td>
+          <td>
+            <p-tag [value]="eventLabel(evt.type)" [severity]="eventSeverity(evt.type)" />
+          </td>
+          <td>{{ evt.wabaId }}</td>
+          <td>{{ evt.from }}</td>
+          <td>{{ evt.content ?? '—' }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
   }
-</section>
+</p-card>

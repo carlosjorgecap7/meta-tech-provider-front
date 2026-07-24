@@ -1,50 +1,66 @@
-<section class="panel">
-  <div class="panel-header">
-    <h2>WhatsApp Business Accounts</h2>
-    <button
-      type="button"
-      [disabled]="service.state() === 'loading'"
-      (click)="refresh()"
-      aria-label="Refresh account list"
-    >
-      Refresh
-    </button>
-  </div>
+<p-card>
+  <ng-template #header>
+    <div class="flex items-center justify-between px-6 pt-5">
+      <h2 class="text-xl font-semibold">WhatsApp Business Accounts</h2>
+      <p-button
+        icon="pi pi-refresh"
+        [loading]="service.state() === 'loading'"
+        [disabled]="service.state() === 'loading'"
+        (onClick)="refresh()"
+        severity="secondary"
+        rounded
+        aria-label="Refresh account list"
+      />
+    </div>
+  </ng-template>
 
   @if (service.state() === 'loading') {
-    <p class="info" aria-live="polite">Loading accounts...</p>
+    <div class="flex justify-center py-10" aria-live="polite" aria-busy="true">
+      <p-progressSpinner strokeWidth="4" aria-label="Loading accounts" />
+    </div>
   }
 
   @if (service.state() === 'error' && errorMessage(); as msg) {
-    <p class="error" aria-live="assertive">{{ msg }}</p>
+    <p-message severity="error" [text]="msg" aria-live="assertive" />
   }
 
   @if (service.isEmpty()) {
-    <p class="info" role="status">No accounts connected yet.</p>
+    <div class="flex flex-col items-center py-12 text-surface-500" role="status">
+      <i class="pi pi-inbox text-5xl mb-3" aria-hidden="true"></i>
+      <p>No accounts connected yet.</p>
+    </div>
   }
 
   @if (service.state() === 'loaded' && !service.isEmpty()) {
-    <table aria-label="Connected WABAs list">
-      <thead>
+    <p-table
+      [value]="service.wabas()"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[5, 10, 20]"
+      styleClass="p-datatable-sm"
+      aria-label="Connected WABAs list"
+    >
+      <ng-template #header>
         <tr>
           <th scope="col">Name</th>
           <th scope="col">Phone</th>
           <th scope="col">Status</th>
           <th scope="col">Connected on</th>
         </tr>
-      </thead>
-      <tbody>
-        @for (waba of service.wabas(); track waba.wabaId) {
-          <tr>
-            <td>{{ waba.displayName }}</td>
-            <td>{{ waba.phoneNumber }}</td>
-            <td>
-              <span [class]="statusSeverity(waba.status)">{{ statusLabel(waba.status) }}</span>
-            </td>
-            <td>{{ waba.connectedAt | date: 'MM/dd/yyyy HH:mm' }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+      </ng-template>
+      <ng-template #body let-waba>
+        <tr>
+          <td>{{ waba.displayName }}</td>
+          <td>{{ waba.phoneNumber }}</td>
+          <td>
+            <p-tag
+              [value]="statusLabel(waba.status)"
+              [severity]="statusSeverity(waba.status)"
+            />
+          </td>
+          <td>{{ waba.connectedAt | date: 'MM/dd/yyyy HH:mm' }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
   }
-</section>
+</p-card>

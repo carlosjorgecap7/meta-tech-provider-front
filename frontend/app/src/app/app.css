@@ -1,6 +1,6 @@
 .app-topbar {
-  background-color: var(--p-surface-0, #ffffff);
-  border-bottom: 1px solid var(--p-surface-200, #e5e7eb);
+  background-color: var(--p-surface-0);
+  border-bottom: 1px solid var(--p-surface-200);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -19,7 +19,7 @@
 .app-topbar__brand {
   font-weight: 700;
   font-size: 1rem;
-  color: var(--p-primary-500, #0b5fff);
+  color: var(--p-primary-500);
   white-space: nowrap;
 }
 
@@ -32,21 +32,19 @@
   padding: 0.375rem 0.75rem;
   border-radius: 6px;
   font-size: 0.875rem;
-  color: var(--p-surface-700, #334155);
+  color: var(--p-surface-700);
   text-decoration: none;
-  transition:
-    background-color 0.15s,
-    color 0.15s;
+  transition: background-color 0.15s, color 0.15s;
 }
 
 .app-topbar__link:hover {
-  background-color: var(--p-surface-100, #f1f5f9);
-  color: var(--p-surface-900, #0f172a);
+  background-color: var(--p-surface-100);
+  color: var(--p-surface-900);
 }
 
 .app-topbar__link--active {
-  background-color: var(--p-primary-50, #dbeafe);
-  color: var(--p-primary-600, #2563eb);
+  background-color: var(--p-primary-50);
+  color: var(--p-primary-600);
   font-weight: 600;
 }
 
