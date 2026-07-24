@@ -3,13 +3,13 @@ export const environment = {
   useMockBackend: false,
 
   api: {
-    baseUrl: 'https://api.your-domain.com',
+    baseUrl: 'https://sggy86nf5k.execute-api.eu-west-1.amazonaws.com',
   },
 
   meta: {
-    appId: 'YOUR_META_APP_ID',
+    appId: '864793622627809',
     sdkVersion: 'v21.0',
-    configId: 'YOUR_EMBEDDED_SIGNUP_CONFIG_ID',
+    configId: '1209692291296285',
   },
 
   tenant: {

@@ -3,8 +3,20 @@ import type { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'connect',
+    redirectTo: 'inbox',
     pathMatch: 'full',
+  },
+  {
+    path: 'inbox',
+    loadComponent: () =>
+      import('./features/inbox/inbox-list').then((m) => m.InboxList),
+    title: 'Inbox',
+  },
+  {
+    path: 'inbox/:wabaId/:from',
+    loadComponent: () =>
+      import('./features/inbox/conversation-view').then((m) => m.ConversationView),
+    title: 'Conversation',
   },
   {
     path: 'connect',
@@ -28,6 +40,6 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: 'connect',
+    redirectTo: 'inbox',
   },
 ];

@@ -1,0 +1,84 @@
+<div class="chat-container">
+  <!-- Header -->
+  <div class="chat-header">
+    <p-button
+      icon="pi pi-arrow-left"
+      severity="secondary"
+      text
+      (onClick)="goBack()"
+      aria-label="Back to inbox"
+    />
+    <div class="chat-header__info">
+      <div class="chat-header__avatar" aria-hidden="true">
+        <i class="pi pi-user"></i>
+      </div>
+      <div>
+        <div class="chat-header__number">{{ fromNumber }}</div>
+        <div class="chat-header__waba">WhatsApp Business</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="chat-messages" #messagesContainer role="log" aria-label="Conversation messages" aria-live="polite">
+    @if (service.state() === 'loading' && service.messages().length === 0) {
+      <div class="chat-loading">
+        <p-progressSpinner strokeWidth="4" aria-label="Loading messages" />
+      </div>
+    }
+
+    @for (msg of service.messages(); track msg.messageId) {
+      <div
+        class="message-bubble-wrapper"
+        [class.message-bubble-wrapper--out]="msg.direction === 'OUT'"
+      >
+        <div
+          class="message-bubble"
+          [class.message-bubble--in]="msg.direction === 'IN'"
+          [class.message-bubble--out]="msg.direction === 'OUT'"
+        >
+          <p class="message-content">{{ msg.content }}</p>
+          <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
+          @if (msg.direction === 'OUT') {
+            <i
+              class="pi message-status"
+              [class.pi-check]="msg.status === 'sent'"
+              [class.pi-check-circle]="msg.status === 'delivered' || msg.status === 'read'"
+              [attr.aria-label]="msg.status"
+            ></i>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Error -->
+  @if (errorMessage(); as msg) {
+    <div class="chat-error">
+      <p-message severity="error" [text]="msg" />
+    </div>
+  }
+
+  <!-- Reply box -->
+  <div class="chat-reply">
+    <textarea
+      pTextarea
+      class="chat-reply__input"
+      placeholder="Write a message… (Enter to send, Shift+Enter for new line)"
+      [ngModel]="replyText()"
+      (ngModelChange)="replyText.set($event)"
+      (keydown)="onKeydown($event)"
+      [disabled]="service.sending()"
+      rows="2"
+      aria-label="Reply message"
+    ></textarea>
+    <p-button
+      icon="pi pi-send"
+      severity="success"
+      [loading]="service.sending()"
+      [disabled]="!replyText().trim() || service.sending()"
+      (onClick)="sendReply()"
+      aria-label="Send message"
+    />
+  </div>
+</div>

@@ -60,6 +60,7 @@ export class WhatsappConnect implements OnInit, OnDestroy {
   });
 
   private messageListener: ((event: MessageEvent) => void) | null = null;
+  private pendingAuthCode: string | null = null;
 
   ngOnInit(): void {
     this.registerMessageListener();
@@ -102,6 +103,7 @@ export class WhatsappConnect implements OnInit, OnDestroy {
         return;
       }
 
+      this.pendingAuthCode = response.authResponse.code;
       this.logger.info('FB.login exitoso, esperando postMessage de Embedded Signup');
     } catch (err) {
       this.state.set('error');
@@ -140,10 +142,23 @@ export class WhatsappConnect implements OnInit, OnDestroy {
   }
 
   private handleSignupFinish(wabaId: string, phoneNumberId: string): void {
+    if (!this.pendingAuthCode) {
+      const loginError: SdkLoginError = {
+        type: 'SdkLoginError',
+        status: 'unknown',
+        message: 'Authorization code expired or missing. Please try again.',
+      };
+      this.state.set('error');
+      this.error.set(loginError);
+      return;
+    }
+
     const tenantId = this.tenant.tenantId();
+    const code = this.pendingAuthCode;
+    this.pendingAuthCode = null;
 
     this.onboarding
-      .exchange({ code: 'pending-from-fb-login', wabaId, phoneNumberId, tenantId })
+      .exchange({ code, wabaId, phoneNumberId, tenantId })
       .subscribe({
         next: (res) => {
           this.result.set(res);

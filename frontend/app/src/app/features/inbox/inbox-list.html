@@ -1,0 +1,64 @@
+<p-card>
+  <ng-template #header>
+    <div class="inbox-header">
+      <h2 class="text-xl font-semibold">Inbox</h2>
+      <p-button
+        icon="pi pi-refresh"
+        severity="secondary"
+        rounded
+        [loading]="service.state() === 'loading'"
+        [disabled]="service.state() === 'loading'"
+        (onClick)="service.togglePause(); service.togglePause()"
+        aria-label="Refresh conversations"
+      />
+    </div>
+  </ng-template>
+
+  @if (service.state() === 'loading' && service.conversations().length === 0) {
+    <div class="inbox-loading" aria-live="polite" aria-busy="true">
+      <p-progressSpinner strokeWidth="4" aria-label="Loading conversations" />
+    </div>
+  }
+
+  @if (service.state() === 'error' && errorMessage(); as msg) {
+    <p-message severity="error" [text]="msg" aria-live="assertive" />
+  }
+
+  @if (service.isEmpty()) {
+    <div class="inbox-empty" role="status">
+      <i class="pi pi-inbox" aria-hidden="true"></i>
+      <p>No conversations yet. WhatsApp messages will appear here.</p>
+    </div>
+  }
+
+  @if (service.conversations().length > 0) {
+    <ul class="conversation-list" role="list">
+      @for (conv of service.conversations(); track conv.from) {
+        <li
+          class="conversation-item"
+          role="listitem"
+          (click)="openConversation(conv)"
+          (keydown.enter)="openConversation(conv)"
+          tabindex="0"
+          [attr.aria-label]="'Open conversation with ' + conv.from"
+        >
+          <div class="conversation-avatar" aria-hidden="true">
+            <i class="pi pi-user"></i>
+          </div>
+          <div class="conversation-body">
+            <div class="conversation-top">
+              <span class="conversation-from">{{ conv.from }}</span>
+              <span class="conversation-time">{{ timeAgo(conv.lastMessageAt) }}</span>
+            </div>
+            <div class="conversation-preview">
+              @if (conv.direction === 'OUT') {
+                <i class="pi pi-arrow-right conversation-direction" aria-label="Outbound"></i>
+              }
+              <span class="conversation-last-message">{{ conv.lastMessage }}</span>
+            </div>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</p-card>

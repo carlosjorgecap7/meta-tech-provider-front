@@ -8,8 +8,72 @@ import { of, delay } from 'rxjs';
 import type { WabaDto } from '../../features/wabas/wabas.types';
 import type { WebhookEventDto } from '../../features/events/events.types';
 import type { ExchangeResponseDto } from '../../features/whatsapp-connect/whatsapp-onboarding.types';
+import type { ConversationDto, MessageDto, SendReplyResponse } from '../../features/inbox/inbox.types';
 
 const MOCK_DELAY_MS = 600;
+
+const MOCK_CONVERSATIONS: ConversationDto[] = [
+  {
+    wabaId: 'waba_001',
+    from: '+34600111222',
+    lastMessage: 'Buenas, ¿me podéis ayudar con mi póliza?',
+    lastMessageAt: new Date(Date.now() - 90_000).toISOString(),
+    direction: 'IN',
+  },
+  {
+    wabaId: 'waba_001',
+    from: '+34600333444',
+    lastMessage: 'Necesito información sobre el seguro del coche',
+    lastMessageAt: new Date(Date.now() - 300_000).toISOString(),
+    direction: 'IN',
+  },
+  {
+    wabaId: 'waba_001',
+    from: '+34600555666',
+    lastMessage: 'Gracias, hasta luego',
+    lastMessageAt: new Date(Date.now() - 3_600_000).toISOString(),
+    direction: 'OUT',
+  },
+];
+
+const MOCK_MESSAGES: Record<string, MessageDto[]> = {
+  '+34600111222': [
+    {
+      messageId: 'msg_001',
+      direction: 'IN',
+      content: 'Hola, buenas tardes',
+      status: 'received',
+      createdAt: new Date(Date.now() - 300_000).toISOString(),
+      from: '+34600111222',
+    },
+    {
+      messageId: 'msg_002',
+      direction: 'OUT',
+      content: '¡Hola! ¿En qué podemos ayudarte?',
+      status: 'delivered',
+      createdAt: new Date(Date.now() - 250_000).toISOString(),
+      from: '+34600111222',
+    },
+    {
+      messageId: 'msg_003',
+      direction: 'IN',
+      content: 'Buenas, ¿me podéis ayudar con mi póliza?',
+      status: 'received',
+      createdAt: new Date(Date.now() - 90_000).toISOString(),
+      from: '+34600111222',
+    },
+  ],
+  '+34600333444': [
+    {
+      messageId: 'msg_004',
+      direction: 'IN',
+      content: 'Necesito información sobre el seguro del coche',
+      status: 'received',
+      createdAt: new Date(Date.now() - 300_000).toISOString(),
+      from: '+34600333444',
+    },
+  ],
+};
 
 const MOCK_WABAS: WabaDto[] = [
   {
@@ -72,6 +136,23 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (method === 'GET' && path === '/events') {
     return of(new HttpResponse({ status: 200, body: MOCK_EVENTS })).pipe(delay(MOCK_DELAY_MS));
+  }
+
+  if (method === 'GET' && path === '/conversations') {
+    return of(new HttpResponse({ status: 200, body: MOCK_CONVERSATIONS })).pipe(delay(MOCK_DELAY_MS));
+  }
+
+  const messagesMatch = path.match(/^\/conversations\/([^/]+)\/([^/]+)\/messages$/);
+  if (method === 'GET' && messagesMatch) {
+    const from = decodeURIComponent(messagesMatch[2]);
+    const msgs: MessageDto[] = MOCK_MESSAGES[from] ?? [];
+    return of(new HttpResponse({ status: 200, body: msgs })).pipe(delay(MOCK_DELAY_MS));
+  }
+
+  const replyMatch = path.match(/^\/conversations\/([^/]+)\/([^/]+)\/reply$/);
+  if (method === 'POST' && replyMatch) {
+    const body: SendReplyResponse = { status: 'sent', messageId: `msg_${Date.now()}` };
+    return of(new HttpResponse({ status: 200, body })).pipe(delay(MOCK_DELAY_MS));
   }
 
   return next(req);
